@@ -1,6 +1,8 @@
 import torch
 import random
 import numpy as np
+import pygame
+
 from collections import deque
 from game import SnakeGameAI, Direction, Point
 from model import Linear_QNet, QTrainer
@@ -15,7 +17,7 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0 # randomness
-        self.gamma = 0.9 # discount rate
+        self.gamma = 0.5 # discount rate
         self.memory = deque(maxlen=MAX_MEMORY) # popleft()
         self.model = Linear_QNet(11, 256, 3)
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
@@ -63,8 +65,12 @@ class Agent:
             game.food.x > game.head.x,  # food right
             game.food.y < game.head.y,  # food up
             game.food.y > game.head.y  # food down
+            
+            # Near the Food
+            # game.head in game.surrounding1,
+            # game.head in game.surrounding2,
+            # game.head in game.surrounding3
             ]
-
         return np.array(state, dtype=int)
 
     def remember(self, state, action, reward, next_state, done):
@@ -86,6 +92,7 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation
+        # self.epsilon = 80 - (self.n_games^2)/80
         self.epsilon = 80 - self.n_games
         final_move = [0,0,0]
         if random.randint(0, 200) < self.epsilon:
@@ -141,6 +148,32 @@ def train():
             mean_score = total_score / agent.n_games
             plot_mean_scores.append(mean_score)
             plot(plot_scores, plot_mean_scores)
+            
+        if agent.n_games == 200:
+            print("training ends")
+            
+            print("self_collision_count:",game.self_collision_count)
+            print("self_collision_AvgScore:",game.self_collision_score/game.self_collision_count)
+            
+            print("hit_bound_count:",game.hit_bound_count)
+            print("hit_bound_AvgScore:",game.hit_bound_score/game.hit_bound_count)
+            
+            print("time_out_count:",game.time_out_count)
+            if (game.time_out_count != 0):
+                print("time_out_AvgScore:",game.time_out_score/game.time_out_count)
+            else:
+                print("no time out happened!")
+            print("mean score:", mean_score)
+            
+            break
+    
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
+        
+        pygame.display.flip()
 
 
 if __name__ == '__main__':
